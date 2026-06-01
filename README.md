@@ -1,4 +1,4 @@
-# Adaptive Memory Chunk X (amcx)
+# Adaptive Memory Chunk eXtended (amcx)
 
 A Python library for efficient memory chunking with adaptive algorithms.
 
