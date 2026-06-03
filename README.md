@@ -2,6 +2,8 @@
 
 A Python library for efficient memory chunking with adaptive algorithms.
 
+### read wiki for more info 
+
 ## Installation
 
 ```bash
