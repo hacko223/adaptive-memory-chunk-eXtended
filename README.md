@@ -2,7 +2,7 @@
 
 A Python library for efficient memory chunking with adaptive algorithms.
 
-### read wiki for more info 
+### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) for more info*
 
 ## Installation
 
