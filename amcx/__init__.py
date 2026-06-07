@@ -13,8 +13,8 @@ from .exceptions import (
     AMCXCompressionError, AMCXChunkNotFoundError, AMCXCorruptError, AMCXReadOnlyError,
 )
 
-__version__ = "0.3.0"
-__author__  = "Tu nombre aquí"
+__version__ = "0.3.1"
+__author__  = "hacko223"
 __all__ = [
     "AMCXReader", "AMCXWriter",
     "AMCXMirror", "AMCXRecovery", "MirrorMode", "MirrorStatus", "ChunkStatus",
@@ -29,3 +29,14 @@ __all__ = [
 from .smart import SmartMemory
 
 __all__ += ["SmartMemory"]
+
+# Security
+from .detection import (
+    scan_chunks, scan_ram, full_scan, guarded,
+    ScanResult, ChunkThreat, SecurityThreatError,
+)
+
+__all__ += [
+    "scan_chunks", "scan_ram", "full_scan", "guarded",
+    "ScanResult", "ChunkThreat", "SecurityThreatError",
+]
