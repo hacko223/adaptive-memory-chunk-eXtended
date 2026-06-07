@@ -2,7 +2,7 @@
 
 A Python library for efficient memory chunking with adaptive algorithms.
 
-### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) for more info*
+### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or [page](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
 
 ## Installation
 
@@ -21,7 +21,7 @@ from amcx import chunk_memory
 ## License
 
 This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0+).
-See the [LICENSE](https://github.com/hacko223/adaptive-memory-chunk-eXtended/blob/main/LICENSE) file for details
+See the [LICENSE](https://github.com/hacko223/adaptive-memory-chunk-eXtended/blob/f8390768395aa1d9dc210e9f25de0366684dfaf2/LICENSE) file for details.
 
 ## Author
 
