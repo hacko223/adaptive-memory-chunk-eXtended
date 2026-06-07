@@ -187,11 +187,16 @@ result = <span class="fn">full_scan</span>(<span class="st">"chat.amcx"</span>)
 //  al inicio del array. Etiquetas disponibles:
 //  "added" | "changed" | "fixed" | "security"
 // ═══════════════════════════════════════════════════════════════
+// ─── labels disponibles por versión (opcional) ───────────────
+//   label: "active"       → verde, indica soporte activo
+//   label: "end-of-life"  → rojo, indica sin soporte
+//   (si no pones label, no aparece nada)
+// tags disponibles: "added" | "changed" | "fixed" | "security"
 const CHANGELOG = [
-  // tags disponibles: "added" | "changed" | "fixed" | "security"
   {
     version: "v0.3.1",
     date: "2026-06-06",
+    label: "active",
     items: [
       { tag: "security", text: "detection.py — chunk-level bypass scanner with 12 regex patterns covering prompt injection, delimiter smuggling, base64 obfuscation, and unicode confusables" },
       { tag: "security", text: "RAM scanner using gc.get_objects() + ctypes — detects and zeroes out threat payloads in-process before execution" },
@@ -202,7 +207,8 @@ const CHANGELOG = [
   },
   {
     version: "v0.3.0",
-    date: "2026-xx-xx",
+    date: "2026-06-05",
+    label: "end-of-life",
     items: [
       { tag: "added", text: "per-chunk CRC32 stored in index" },
       { tag: "added", text: "SmartMemory high-level API — automatic compression, flush, search, and repair" },
@@ -219,10 +225,20 @@ const CHANGELOG = [
 const latest = CHANGELOG[0];
 document.getElementById('hero-badge').textContent = latest.version + ' — released ' + latest.date;
 
+const LABEL_STYLES = {
+  'active':      'background:rgba(138,240,184,0.1);color:#8af0b8;border:0.5px solid rgba(138,240,184,0.3);',
+  'end-of-life': 'background:rgba(255,100,100,0.08);color:#ff7070;border:0.5px solid rgba(255,100,100,0.2);',
+};
+
+const VISIBLE = 5;
 const list = document.getElementById('changelog-list');
-CHANGELOG.forEach(release => {
+
+function renderEntry(release) {
   const entry = document.createElement('div');
   entry.className = 'changelog-entry';
+  const labelHtml = release.label
+    ? `<span style="display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;margin-top:6px;${LABEL_STYLES[release.label]}">${release.label}</span>`
+    : '';
   const items = release.items.map(i =>
     `<li><span class="tag tag-${i.tag}">${i.tag}</span>${i.text}</li>`
   ).join('');
@@ -230,11 +246,29 @@ CHANGELOG.forEach(release => {
     <div>
       <div class="changelog-version">${release.version}</div>
       <div class="changelog-date">${release.date}</div>
+      ${labelHtml}
     </div>
     <ul class="changelog-items">${items}</ul>
   `;
-  list.appendChild(entry);
-});
+  return entry;
+}
+
+CHANGELOG.slice(0, VISIBLE).forEach(r => list.appendChild(renderEntry(r)));
+
+if (CHANGELOG.length > VISIBLE) {
+  const older = document.createElement('div');
+  older.style.cssText = 'padding:1.5rem 0;border-top:0.5px solid var(--border);';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-ghost';
+  btn.style.cssText = 'font-size:12px;padding:8px 16px;';
+  btn.textContent = 'show ' + (CHANGELOG.length - VISIBLE) + ' older releases';
+  btn.onclick = () => {
+    CHANGELOG.slice(VISIBLE).forEach(r => list.insertBefore(renderEntry(r), older));
+    older.remove();
+  };
+  older.appendChild(btn);
+  list.appendChild(older);
+}
 
 function copyInstall(btn) {
   navigator.clipboard.writeText('pip install amcx');
