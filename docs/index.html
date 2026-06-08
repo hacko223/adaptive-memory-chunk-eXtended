@@ -68,12 +68,6 @@
   .tag-fixed { background: rgba(110,181,255,0.1); color: #6eb5ff; border: 0.5px solid rgba(110,181,255,0.2); }
   .tag-changed { background: rgba(200,240,100,0.1); color: var(--accent); border: 0.5px solid rgba(200,240,100,0.2); }
   .tag-security { background: rgba(197,148,197,0.12); color: #c594c5; border: 0.5px solid rgba(197,148,197,0.25); }
-  .wiki-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 2rem; }
-  .wiki-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 8px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; display: block; }
-  .wiki-card:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-2px); }
-  .wiki-card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; }
-  .wiki-card-title svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
-  .wiki-card-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
   footer { border-top: 0.5px solid var(--border); padding: 2rem 2.5rem; display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; }
   footer p { font-family: var(--mono); font-size: 12px; color: var(--muted); }
   footer a { color: var(--accent); text-decoration: none; }
@@ -88,7 +82,7 @@
   <a href="#" class="nav-logo">amcx</a>
   <ul class="nav-links">
     <li><a href="#home">home</a></li>
-    <li><a href="#modules">modules</a></li>
+    <li><a href="#ecosystem">ecosystem</a></li>
     <li><a href="#changelog">changelog</a></li>
     <li><a href="#wiki">wiki</a></li>
     <li><a href="https://github.com/hacko223/adaptive-memory-chunk-eXtended" target="_blank">github ↗</a></li>
@@ -116,40 +110,48 @@
   </div>
 </div>
 
-<section id="modules">
-  <p class="section-label">architecture</p>
-  <h2>What's inside</h2>
-  <div class="modules-grid">
-    <div class="module-card"><div class="module-icon">rw</div><div class="module-name">reader.py / writer.py</div><div class="module-desc">Binary .amcx format I/O. Loads only the index until you request a specific chunk. CRC32 verification on every read.</div></div>
-    <div class="module-card"><div class="module-icon">sm</div><div class="module-name">smart.py</div><div class="module-desc">High-level API. Automatic compression selection, chunk splitting, search, and selective decompression.</div></div>
-    <div class="module-card"><div class="module-icon">mr</div><div class="module-name">mirror.py</div><div class="module-desc">SHA-1 mirror blocks and XOR recovery. Detects and repairs corrupt chunks without losing data.</div></div>
-    <div class="module-card"><div class="module-icon">dt</div><div class="module-name">detection.py</div><div class="module-desc">Chunk-level bypass scanner and in-process RAM scan. Detects and purges injection patterns before execution.</div></div>
-    <div class="module-card"><div class="module-icon">cx</div><div class="module-name">compression.py</div><div class="module-desc">zlib for active chunks, lzma for older ones. Speed when it matters, density when it doesn't.</div></div>
-    <div class="module-card"><div class="module-icon">fm</div><div class="module-name">format.py</div><div class="module-desc">Binary spec definition. Fixed-size header, index entries, magic bytes, flags, and struct layouts.</div></div>
-  </div>
-  <div class="code-block">
-    <div class="code-header">
-      <span class="code-title">quickstart.py</span>
-      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<section id="ecosystem">
+  <p class="section-label">ecosystem</p>
+  <h2>very heavy</h2>
+  <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:2rem;margin-top:2rem;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <span style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);">amcl</span>
+      <span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(200,240,100,0.08);color:var(--accent);border:0.5px solid rgba(200,240,100,0.2);">in development</span>
     </div>
-    <pre><span class="kw">from</span> <span class="im">amcx</span> <span class="kw">import</span> SmartMemory, full_scan, guarded
+    <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:580px;margin-bottom:1.5rem;">A lightweight Python library for efficient memory chunking. The leaner cousin of amcx — same philosophy, smaller footprint. Built by hacko223 &amp; ArtemisRGA.</p>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
 
-<span class="cm"># basic usage</span>
-memory = <span class="fn">SmartMemory</span>(<span class="st">"chat.amcx"</span>)
-memory.<span class="fn">append</span>(<span class="st">"user: hello"</span>)
-memory.<span class="fn">append</span>(<span class="st">"ai: hello, how can I help?"</span>)
-results = memory.<span class="fn">search</span>(<span class="st">"hello"</span>)
+      <!-- HACKO: cuando subas amcl a PyPI cambia esto a false -->
+      <script>const disabled_pypi_amcl = true;</script>
+      <a id="btn-amcl-pypi" href="https://pypi.org/project/amcl/" target="_blank" class="btn btn-primary" style="font-size:12px;padding:8px 16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PyPI
+      </a>
 
-<span class="cm"># security scan</span>
-result = <span class="fn">full_scan</span>(<span class="st">"chat.amcx"</span>)
-<span class="kw">if not</span> result.clean:
-    <span class="fn">print</span>(result.chunk_threats)
+      <a href="https://github.com/hacko223/adaptive-memory-chunk-lite" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:8px 16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        GitHub
+      </a>
 
-<span class="cm"># guard decorator — blocks execution on threat</span>
-<span class="kw">@</span><span class="fn">guarded</span>(<span class="st">"chat.amcx"</span>)
-<span class="kw">def</span> <span class="fn">run_model</span>():
-    ...</pre>
+      <!-- HACKO: cuando configures Pages de amcl cambia esto a false -->
+      <script>const disabled_pages_amcl = true;</script>
+      <a id="btn-amcl-pages" href="https://hacko223.github.io/adaptive-memory-chunk-lite/" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:8px 16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        Pages
+      </a>
+
+    </div>
   </div>
+  <script>
+    if (disabled_pypi_amcl) {
+      const b = document.getElementById('btn-amcl-pypi');
+      b.removeAttribute('href'); b.style.opacity='0.35'; b.style.pointerEvents='none'; b.title='not on PyPI yet';
+    }
+    if (disabled_pages_amcl) {
+      const b = document.getElementById('btn-amcl-pages');
+      b.removeAttribute('href'); b.style.opacity='0.35'; b.style.pointerEvents='none'; b.title='pages not configured yet';
+    }
+  </script>
 </section>
 
 <section id="changelog">
@@ -184,14 +186,13 @@ result = <span class="fn">full_scan</span>(<span class="st">"chat.amcx"</span>)
 // ═══════════════════════════════════════════════════════════════
 //  CHANGELOG — HACKO: SOLO EDITA ESTE BLOQUE
 //  Para agregar una versión nueva, copia un objeto {} y pégalo
-//  al inicio del array. Etiquetas disponibles:
-//  "added" | "changed" | "fixed" | "security"
-// ═══════════════════════════════════════════════════════════════
+//  al inicio del array.
 // ─── labels disponibles por versión (opcional) ───────────────
 //   label: "active"       → verde, indica soporte activo
 //   label: "end-of-life"  → rojo, indica sin soporte
 //   (si no pones label, no aparece nada)
-// tags disponibles: "added" | "changed" | "fixed" | "security"
+// ─── tags disponibles: "added" | "changed" | "fixed" | "security"
+// ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
   {
     version: "v0.3.1",
