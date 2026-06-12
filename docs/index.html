@@ -196,6 +196,16 @@
 // ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
   {
+    version: "v0.3.2",
+    date: "2026-06-12",
+    status: "active",
+    phase: "beta",
+    items: [
+      { tag: "changed", text: "detection.py — full_scan now acepts chunk_scan, ram_scan and ram_purge flags (0/1) for granular control" },
+      { tag: "changed", text: "scan_ram purge parameter changed from bool to int" },
+    ]
+  },
+  {
     version: "v0.3.1",
     date: "2026-06-06",
     status: "active",
@@ -205,7 +215,6 @@ const CHANGELOG = [
       { tag: "security", text: "RAM scanner using gc.get_objects() + ctypes — detects and zeroes out threat payloads in-process before execution" },
       { tag: "added",    text: "guarded decorator — wraps any function and raises SecurityThreatError if a threat is detected" },
       { tag: "added",    text: "scan_chunks, scan_ram, full_scan, ScanResult, ChunkThreat exported from public API" },
-      { tag: "changed",  text: "no new dependencies — detection uses stdlib only (re, gc, ctypes, os)" }
     ]
   },
   {
