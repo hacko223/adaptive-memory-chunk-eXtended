@@ -188,16 +188,18 @@
 //  Para agregar una versión nueva, copia un objeto {} y pégalo
 //  al inicio del array.
 // ─── labels disponibles por versión (opcional) ───────────────
-//   label: "active"       → verde, indica soporte activo
-//   label: "end-of-life"  → rojo, indica sin soporte
-//   (si no pones label, no aparece nada)
+//   status: "active" | "end-of-life"   → indica si está en soporte
+//   phase:  "pre-alpha" | "alpha" | "beta" | "stable"  → fase de desarrollo
+//   Si es end-of-life no pongas phase, solo status
+//   Si no pones ninguno, no aparece nada
 // ─── tags disponibles: "added" | "changed" | "fixed" | "security"
 // ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
   {
     version: "v0.3.1",
     date: "2026-06-06",
-    label: "active",
+    status: "active",
+    phase: "beta",
     items: [
       { tag: "security", text: "detection.py — chunk-level bypass scanner with 12 regex patterns covering prompt injection, delimiter smuggling, base64 obfuscation, and unicode confusables" },
       { tag: "security", text: "RAM scanner using gc.get_objects() + ctypes — detects and zeroes out threat payloads in-process before execution" },
@@ -209,7 +211,8 @@ const CHANGELOG = [
   {
     version: "v0.3.0",
     date: "2026-06-xx",
-    label: "active",
+    status: "active",
+    phase: "beta",
     items: [
       { tag: "added", text: "per-chunk CRC32 stored in index" },
       { tag: "added", text: "SmartMemory high-level API — automatic compression, flush, search, and repair" },
@@ -226,9 +229,15 @@ const CHANGELOG = [
 const latest = CHANGELOG[0];
 document.getElementById('hero-badge').textContent = latest.version + ' — released ' + latest.date;
 
-const LABEL_STYLES = {
+const STATUS_STYLES = {
   'active':      'background:rgba(138,240,184,0.1);color:#8af0b8;border:0.5px solid rgba(138,240,184,0.3);',
   'end-of-life': 'background:rgba(255,100,100,0.08);color:#ff7070;border:0.5px solid rgba(255,100,100,0.2);',
+};
+const PHASE_STYLES = {
+  'pre-alpha': 'background:rgba(150,150,150,0.08);color:#aaaaaa;border:0.5px solid rgba(150,150,150,0.2);',
+  'alpha':     'background:rgba(255,180,80,0.08);color:#ffb450;border:0.5px solid rgba(255,180,80,0.2);',
+  'beta':      'background:rgba(110,181,255,0.08);color:#6eb5ff;border:0.5px solid rgba(110,181,255,0.2);',
+  'stable':    'background:rgba(200,240,100,0.08);color:#c8f064;border:0.5px solid rgba(200,240,100,0.2);',
 };
 
 const VISIBLE = 5;
@@ -237,9 +246,15 @@ const list = document.getElementById('changelog-list');
 function renderEntry(release) {
   const entry = document.createElement('div');
   entry.className = 'changelog-entry';
-  const labelHtml = release.label
-    ? `<span style="display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;margin-top:6px;${LABEL_STYLES[release.label]}">${release.label}</span>`
-    : '';
+  const tag = (style, text) =>
+    `<span style="display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;margin-top:6px;margin-right:4px;${style}">${text}</span>`;
+  let labelsHtml = '';
+  if (release.status === 'end-of-life') {
+    labelsHtml = tag(STATUS_STYLES['end-of-life'], 'end-of-life');
+  } else {
+    if (release.status) labelsHtml += tag(STATUS_STYLES[release.status], release.status);
+    if (release.phase)  labelsHtml += tag(PHASE_STYLES[release.phase],   release.phase);
+  }
   const items = release.items.map(i =>
     `<li><span class="tag tag-${i.tag}">${i.tag}</span>${i.text}</li>`
   ).join('');
@@ -247,7 +262,7 @@ function renderEntry(release) {
     <div>
       <div class="changelog-version">${release.version}</div>
       <div class="changelog-date">${release.date}</div>
-      ${labelHtml}
+      <div style="display:flex;flex-wrap:wrap;gap:2px;">${labelsHtml}</div>
     </div>
     <ul class="changelog-items">${items}</ul>
   `;
