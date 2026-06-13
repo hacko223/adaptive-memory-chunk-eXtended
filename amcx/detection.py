@@ -41,6 +41,27 @@ _BYPASS_PATTERNS: list[re.Pattern] = [
 
     # Unicode confusables for "system"
     re.compile(r"[\u0073\uff53][\u0079\uff59][\u0073\uff53][\u0074\uff54][\u0065\uff45][\u006d\uff4d]", re.I),
+
+    # Narrative framing (Fable 5 technique)
+    re.compile(r"\b(imagine|suppose|hypothetically|in\s+a\s+story|in\s+a\s+fictional|for\s+a\s+novel|in\s+this\s+scenario)\b.{0,80}(hack|exploit|bypass|jailbreak|weapon|synthesize|manufacture)", re.I | re.S),
+    re.compile(r"\b(write\s+a\s+(story|scene|chapter|fiction)).{0,80}(instructions?|steps?|how\s+to)\b", re.I | re.S),
+    re.compile(r"\bcharacter\s+(who\s+)?(knows?|explains?|teaches?|reveals?).{0,60}(hack|exploit|weapon|drug|synthesize)", re.I | re.S),
+
+    # Multi-agent decomposition fragments (Fable 5 technique)
+    re.compile(r"\b(step\s+\d+\s+of\s+\d+|part\s+\d+\s+of\s+\d+)\b.{0,120}(continue|next\s+step|proceed)", re.I | re.S),
+    re.compile(r"(fragment|chunk|piece|segment)\s+\d+.{0,60}(reassemble|combine|merge|join\s+together)", re.I | re.S),
+    re.compile(r"\b(first\s+part|second\s+part|final\s+part).{0,80}(together\s+they|combined\s+they|when\s+joined)", re.I | re.S),
+
+    # Long-context manipulation — instruction buried deep
+    re.compile(r"(ignore|disregard|forget).{200,}(above|previous|prior)\s+(instructions?|context|rules)", re.I | re.S),
+
+    # Unicode confusables for "ignore", "override", "instructions"
+    re.compile(r"[\u0069\uff49][\u0067\uff47][\u006e\uff4e][\u006f\uff4f][\u0072\uff52][\u0065\uff45]", re.I),
+    re.compile(r"[\u006f\uff4f][\u0076\uff56][\u0065\uff45][\u0072\uff52][\u0072\uff52][\u0069\uff49][\u0064\uff44][\u0065\uff45]", re.I),
+
+    # Prompt leak / system prompt extraction
+    re.compile(r"\b(repeat|print|output|reveal|show|leak|dump)\s+(your\s+)?(system\s+prompt|instructions?|initial\s+prompt|configuration)", re.I),
+    re.compile(r"what\s+(are|were)\s+your\s+(original\s+)?(instructions?|system\s+prompt|rules|guidelines)", re.I),
 ]
 
 # ─── RAM scan signatures (compiled bytes for ctypes scan) ─────────────────────
@@ -55,6 +76,15 @@ _RAM_BYTE_PATTERNS: list[bytes] = [
     b"act as if you have no rules",
     b"begin injection",
     b"aWdub3JlIGluc3RydWN0aW9u",
+    b"reveal your system prompt",
+    b"repeat your instructions",
+    b"dump your configuration",
+    b"in a fictional story",
+    b"hypothetically speaking",
+    b"step 1 of ",
+    b"fragment 1",
+    b"when joined together",
+    b"reassemble the parts",
 ]
 
 
@@ -155,7 +185,7 @@ def _scrub_string_in_place(target_id: int) -> None:
         pass
 
 
-def scan_ram(purge: bool = True) -> ScanResult:
+def scan_ram(purge: int = 1) -> ScanResult:
     ram_threats: list[str] = []
     purge_ids: list[int] = []
 
@@ -182,9 +212,9 @@ def scan_ram(purge: bool = True) -> ScanResult:
 
 # ─── Full pipeline ─────────────────────────────────────────────────────────────
 
-def full_scan(path: str, purge_ram: bool = True) -> ScanResult:
-    chunk_result = scan_chunks(path)
-    ram_result   = scan_ram(purge=purge_ram)
+def full_scan(path: str, chunk_scan: int = 1, ram_scan: int = 1, ram_purge: int = 1) -> ScanResult:
+    chunk_result = scan_chunks(path) if chunk_scan else ScanResult(clean=True)
+    ram_result   = scan_ram(purge=ram_purge) if ram_scan else ScanResult(clean=True)
 
     return ScanResult(
         clean         = chunk_result.clean and ram_result.clean,
