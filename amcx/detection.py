@@ -42,12 +42,12 @@ _BYPASS_PATTERNS: list[re.Pattern] = [
     # Unicode confusables for "system"
     re.compile(r"[\u0073\uff53][\u0079\uff59][\u0073\uff53][\u0074\uff54][\u0065\uff45][\u006d\uff4d]", re.I),
 
-    # Narrative framing (Fable 5 technique)
+    # Narrative framing (claide Fable 5 technique)
     re.compile(r"\b(imagine|suppose|hypothetically|in\s+a\s+story|in\s+a\s+fictional|for\s+a\s+novel|in\s+this\s+scenario)\b.{0,80}(hack|exploit|bypass|jailbreak|weapon|synthesize|manufacture)", re.I | re.S),
     re.compile(r"\b(write\s+a\s+(story|scene|chapter|fiction)).{0,80}(instructions?|steps?|how\s+to)\b", re.I | re.S),
     re.compile(r"\bcharacter\s+(who\s+)?(knows?|explains?|teaches?|reveals?).{0,60}(hack|exploit|weapon|drug|synthesize)", re.I | re.S),
 
-    # Multi-agent decomposition fragments (Fable 5 technique)
+    # Multi-agent decomposition fragments (claude Fable 5 technique)
     re.compile(r"\b(step\s+\d+\s+of\s+\d+|part\s+\d+\s+of\s+\d+)\b.{0,120}(continue|next\s+step|proceed)", re.I | re.S),
     re.compile(r"(fragment|chunk|piece|segment)\s+\d+.{0,60}(reassemble|combine|merge|join\s+together)", re.I | re.S),
     re.compile(r"\b(first\s+part|second\s+part|final\s+part).{0,80}(together\s+they|combined\s+they|when\s+joined)", re.I | re.S),
