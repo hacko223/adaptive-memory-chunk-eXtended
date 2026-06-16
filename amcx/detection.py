@@ -10,7 +10,7 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 from .reader import AMCXReader
-from .exceptions import AMCXCorruptError
+from .exceptions import AMCXCorruptError, AMCXSecurityError
 
 
 # ─── Bypass signatures (chunk-level) ──────────────────────────────────────────
@@ -151,9 +151,28 @@ def scan_chunks(path: str) -> ScanResult:
 
 # ─── RAM scanner ───────────────────────────────────────────────────────────────
 
+_AMCX_MODULE_IDS: set[int] = set()
+
+def _register_amcx_internals() -> None:
+    import amcx
+    import sys
+    for name, mod in sys.modules.items():
+        if name.startswith("amcx"):
+            _AMCX_MODULE_IDS.add(id(mod))
+            for attr in vars(mod).values():
+                _AMCX_MODULE_IDS.add(id(attr))
+
+try:
+    _register_amcx_internals()
+except Exception:
+    pass
+
+
 def _iter_object_strings() -> list[str]:
     collected = []
     for obj in gc.get_objects():
+        if id(obj) in _AMCX_MODULE_IDS:
+            continue
         try:
             if isinstance(obj, str) and len(obj) > 16:
                 collected.append(obj)
@@ -187,6 +206,7 @@ def _scrub_string_in_place(target_id: int) -> None:
 
 def scan_ram(purge: int = 1) -> ScanResult:
     ram_threats: list[str] = []
+    matched_patterns: list[str] = []
     purge_ids: list[int] = []
 
     gc.collect()
@@ -196,8 +216,8 @@ def scan_ram(purge: int = 1) -> ScanResult:
         text_lower = text.lower().encode("utf-8", errors="replace")
         for pat_bytes in _RAM_BYTE_PATTERNS:
             if pat_bytes.lower() in text_lower:
-                snippet = text[:80].replace("\n", " ")
-                ram_threats.append(snippet)
+                ram_threats.append("[redacted]")
+                matched_patterns.append(pat_bytes.decode("utf-8"))
                 if purge:
                     purge_ids.append(id(text))
                 break
@@ -230,7 +250,7 @@ def guarded(path: str, raise_on_threat: bool = True):
         def wrapper(*args, **kwargs):
             result = full_scan(path)
             if not result.clean and raise_on_threat:
-                raise SecurityThreatError(
+                raise AMCXSecurityError(
                     f"Bypass detected before execution — "
                     f"chunks: {len(result.chunk_threats)}, "
                     f"ram: {len(result.ram_threats)}"
@@ -240,7 +260,4 @@ def guarded(path: str, raise_on_threat: bool = True):
     return decorator
 
 
-# ─── Exception ─────────────────────────────────────────────────────────────────
-
-class SecurityThreatError(Exception):
-    pass
+SecurityThreatError = AMCXSecurityError

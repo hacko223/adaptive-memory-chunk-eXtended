@@ -11,9 +11,10 @@ from .mirror import AMCXMirror, AMCXRecovery, MirrorMode, MirrorStatus, ChunkSta
 from .exceptions import (
     AMCXError, AMCXInvalidFileError, AMCXVersionError,
     AMCXCompressionError, AMCXChunkNotFoundError, AMCXCorruptError, AMCXReadOnlyError,
+    AMCXSecurityError,
 )
 
-__version__ = "0.3.1"
+__version__ = "0.3.3"
 __author__  = "hacko223"
 __all__ = [
     "AMCXReader", "AMCXWriter",
@@ -23,6 +24,7 @@ __all__ = [
     "CHUNK_LORE", "CHUNK_CHARACTER", "CHUNK_EVENT", "CHUNK_ACTIVE", "CHUNK_GENERIC",
     "AMCXError", "AMCXInvalidFileError", "AMCXVersionError",
     "AMCXCompressionError", "AMCXChunkNotFoundError", "AMCXCorruptError", "AMCXReadOnlyError",
+    "AMCXSecurityError",
 ]
 
 # High-level API
@@ -33,10 +35,10 @@ __all__ += ["SmartMemory"]
 # Security
 from .detection import (
     scan_chunks, scan_ram, full_scan, guarded,
-    ScanResult, ChunkThreat, SecurityThreatError,
+    ScanResult, ChunkThreat, SecurityThreatError, AMCXSecurityError,
 )
 
 __all__ += [
     "scan_chunks", "scan_ram", "full_scan", "guarded",
-    "ScanResult", "ChunkThreat", "SecurityThreatError",
+    "ScanResult", "ChunkThreat", "SecurityThreatError", "AMCXSecurityError",
 ]

@@ -28,3 +28,7 @@ class AMCXCorruptError(AMCXError):
 
 class AMCXReadOnlyError(AMCXError):
     """Attempted to write to a file marked as read-only."""
+
+
+class AMCXSecurityError(AMCXError):
+    """A bypass or security threat was detected."""
