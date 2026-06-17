@@ -198,7 +198,7 @@
 // ─── tags disponibles: "added" | "changed" | "fixed" | "security"
 // ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
-  {
+ {
     version: "v0.3.3.1",
     date: "2026-06-17",
     status: "scheduled",
@@ -206,6 +206,15 @@ const CHANGELOG = [
     phase: "beta",
     items: [
       { tag: "fixed",    text: "detection.py" },
+      { tag: "fixed",    text: "exceptions.py" }
+    ]
+  },
+  {
+    version: "v0.3.3",
+    date: "2026-06-16",
+    visibility: "private",
+    phase: "beta",
+    items: [
       { tag: "security", text: "new types of bypass based on Claude Fable 5 — narrative framing, multi-agent decomposition, long-context manipulation and unicode confusables" }
     ]
   },
