@@ -3,6 +3,8 @@
 
 import os
 import time
+import struct
+import zlib
 from typing import Optional, List
 from datetime import datetime, timedelta
 
@@ -170,7 +172,7 @@ class SmartMemory:
         if not self._pending:
             return
         
-        # Load existing chunks
+        # Load existing chunks — copy raw compressed bytes as-is, no decompress/recompress
         existing_chunks = []
         next_id = 0
         
@@ -178,15 +180,37 @@ class SmartMemory:
             try:
                 with AMCXReader(self.path) as reader:
                     for entry in reader.list_chunks():
-                        content = self._load_chunk(entry.chunk_id)
-                        existing_chunks.append(ChunkEntry(
-                            chunk_id=entry.chunk_id,
-                            chunk_type=entry.chunk_type,
-                            summary=entry.summary,
-                            content=content.encode("utf-8"),
-                            algorithm=entry.algorithm,
-                            timestamp=entry.timestamp,
-                        ))
+                        reader._file.seek(entry.offset)
+                        size_field = struct.unpack('>I', reader._file.read(4))[0]
+                        compressed_bytes = reader._file.read(size_field)
+
+                        actual_crc = zlib.crc32(compressed_bytes) & 0xFFFFFFFF
+                        if actual_crc != entry.crc32:
+                            # corrupt — try to recover the decompressed text and
+                            # let it be recompressed fresh below instead of copied raw
+                            recovered = self._try_recover(entry.chunk_id)
+                            if recovered is None:
+                                raise AMCXCorruptError(f"Chunk {entry.chunk_id} is corrupt and unrecoverable")
+                            existing_chunks.append(ChunkEntry(
+                                chunk_id=entry.chunk_id,
+                                chunk_type=entry.chunk_type,
+                                summary=entry.summary,
+                                content=recovered.encode("utf-8"),
+                                algorithm=entry.algorithm,
+                                timestamp=entry.timestamp,
+                            ))
+                        else:
+                            existing_chunks.append(ChunkEntry(
+                                chunk_id=entry.chunk_id,
+                                chunk_type=entry.chunk_type,
+                                summary=entry.summary,
+                                content=compressed_bytes,
+                                algorithm=entry.algorithm,
+                                timestamp=entry.timestamp,
+                                pre_compressed=True,
+                                crc32=entry.crc32,
+                                size_original=entry.size_original,
+                            ))
                         next_id = max(next_id, entry.chunk_id + 1)
             except Exception:
                 pass

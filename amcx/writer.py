@@ -23,12 +23,15 @@ from .mirror import AMCXMirror, AMCXRecovery, MirrorMode, MirrorStatus, ChunkSta
 @dataclass
 class ChunkEntry:
     """Represents a chunk before writing it to the file."""
-    chunk_id:    int
-    chunk_type:  int
-    summary:     str
-    content:     bytes
-    algorithm:   int = COMPRESS_ZLIB
-    timestamp:   int = field(default_factory=lambda: int(time.time()))
+    chunk_id:       int
+    chunk_type:     int
+    summary:        str
+    content:        bytes
+    algorithm:      int = COMPRESS_ZLIB
+    timestamp:      int = field(default_factory=lambda: int(time.time()))
+    pre_compressed: bool = False           # if True, `content` is already compressed — skip compress()
+    crc32:          Optional[int] = None   # required when pre_compressed=True (CRC32 of the compressed bytes)
+    size_original:  Optional[int] = None   # required when pre_compressed=True (size before compression)
 
 
 class AMCXWriter:
@@ -140,8 +143,14 @@ class AMCXWriter:
         # 3. Compress, calculate CRC32 and write each chunk
         index_entries = []
         for entry in self._chunks:
-            compressed   = compress(entry.content, entry.algorithm)
-            chunk_crc32  = zlib.crc32(compressed) & 0xFFFFFFFF
+            if entry.pre_compressed:
+                compressed  = entry.content
+                chunk_crc32 = entry.crc32
+                if chunk_crc32 is None:
+                    chunk_crc32 = zlib.crc32(compressed) & 0xFFFFFFFF
+            else:
+                compressed  = compress(entry.content, entry.algorithm)
+                chunk_crc32 = zlib.crc32(compressed) & 0xFFFFFFFF
             chunk_offset = buf.tell()
 
             buf.write(struct.pack('>I', len(compressed)))
@@ -151,7 +160,7 @@ class AMCXWriter:
                 "chunk_id":        entry.chunk_id,
                 "offset":          chunk_offset,
                 "size_compressed": len(compressed),
-                "size_original":   len(entry.content),
+                "size_original":   entry.size_original if entry.pre_compressed else len(entry.content),
                 "chunk_type":      entry.chunk_type,
                 "algorithm":       entry.algorithm,
                 "timestamp":       entry.timestamp,
