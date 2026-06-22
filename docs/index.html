@@ -83,6 +83,7 @@
   <ul class="nav-links">
     <li><a href="#home">home</a></li>
     <li><a href="#ecosystem">ecosystem</a></li>
+    <li><a href="#addons">add-ons</a></li>
     <li><a href="#changelog">changelog</a></li>
     <li><a href="#wiki">wiki</a></li>
     <li><a href="https://github.com/hacko223/adaptive-memory-chunk-eXtended" target="_blank">github ↗</a></li>
@@ -154,6 +155,34 @@
   </script>
 </section>
 
+<section id="addons">
+  <p class="section-label">performance</p>
+  <h2>add-ons</h2>
+  <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:2rem;margin-top:2rem;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <span style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);">C++ accelerators</span>
+      <span style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(200,240,100,0.08);color:var(--accent);border:0.5px solid rgba(200,240,100,0.2);">in development</span>
+    </div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:580px;margin-bottom:1.5rem;">Optional native accelerators for bypass scanning, CRC32 verification, SHA-1 mirroring and XOR recovery. amcx stays pure Python with zero dependencies — these are entirely opt-in.</p>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+
+      <!-- HACKO: cuando la rama Add-ons esté lista para usarse, cambia esto a false -->
+      <script>const disabled_addons = true;</script>
+      <a id="btn-addons" href="https://github.com/hacko223/adaptive-memory-chunk-eXtended/tree/Add-ons" target="_blank" class="btn btn-primary" style="font-size:12px;padding:8px 16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        View add-ons
+      </a>
+
+    </div>
+  </div>
+  <script>
+    if (disabled_addons) {
+      const b = document.getElementById('btn-addons');
+      b.removeAttribute('href'); b.style.opacity='0.35'; b.style.pointerEvents='none'; b.title='not ready yet';
+    }
+  </script>
+</section>
+
 <section id="changelog">
   <p class="section-label">releases</p>
   <h2>Changelog</h2>
@@ -198,6 +227,16 @@
 // ─── tags disponibles: "added" | "changed" | "fixed" | "security"
 // ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
+ {
+    version: "v0.3.4",
+    date: "2026-06-28",
+    status: "scheduled",
+    scheduled_release: "2026-06-28T19:00:00",
+    phase: "beta",
+    items: [
+      { tag: "added", text: "optional support for native C++ accelerator add-ons (amcx_accel, amcx_crc32, amcx_sha1, amcx_xor) — pure Python fallback remains default" }
+    ]
+  },
  {
     version: "v0.3.3.1",
     date: "2026-06-17",
@@ -307,7 +346,8 @@ function renderEntry(release) {
     const days    = Math.floor(diff / 86400000);
     const hours   = Math.floor((diff % 86400000) / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
-    countdownHtml = `<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;">releases in ${days}d ${hours}h ${minutes}m</div>`;
+    const seconds = Math.floor((diff % 60000) / 1000);
+    countdownHtml = `<div class="countdown-live" data-target="${release.scheduled_release}" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;">releases in ${days}d ${hours}h ${minutes}m ${seconds}s</div>`;
   }
 
   const items = release.items.map(i =>
@@ -326,6 +366,22 @@ function renderEntry(release) {
 }
 
 CHANGELOG.slice(0, VISIBLE).forEach(r => list.appendChild(renderEntry(r)));
+
+function tickCountdowns() {
+  document.querySelectorAll('.countdown-live').forEach(el => {
+    const target = new Date(el.dataset.target) - new Date();
+    if (target <= 0) {
+      el.textContent = 'releasing now';
+      return;
+    }
+    const days    = Math.floor(target / 86400000);
+    const hours   = Math.floor((target % 86400000) / 3600000);
+    const minutes = Math.floor((target % 3600000) / 60000);
+    const seconds = Math.floor((target % 60000) / 1000);
+    el.textContent = `releases in ${days}d ${hours}h ${minutes}m ${seconds}s`;
+  });
+}
+setInterval(tickCountdowns, 1000);
 
 if (CHANGELOG.length > VISIBLE) {
   const older = document.createElement('div');
