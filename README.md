@@ -2,7 +2,7 @@
 
 This branch adds **optional C++ accelerator modules** for `amcx`. The core library remains pure Python with zero dependencies — these add-ons are entirely opt-in and only used if you load them explicitly.
 
-### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or [page](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
+### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or see [changelog](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
 
 ## What's in this branch
 
