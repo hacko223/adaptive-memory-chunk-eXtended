@@ -1,35 +1,54 @@
-# Security Policy
+# Security Policy — C++ Accelerator Add-ons
+
+This policy applies specifically to the `addons/` and `source code/` directories in this branch — the optional C++ accelerator modules for `amcx` (`amcx_accel`, `amcx_crc32`, `amcx_sha1`, `amcx_xor`).
+
+## About these add-ons
+
+These are **optional, native binaries** that `amcx` can load via `ctypes.CDLL` to speed up bypass scanning, CRC32 verification, SHA-1 mirroring, and XOR recovery. They are not required — without them, `amcx` falls back to its pure-Python implementation.
+
+Because they are compiled binaries, they carry different risks than the rest of the project:
+
+- A `.so` or `.dll` can execute arbitrary code with the same privileges as the Python process that loads it.
+- Precompiled binaries cannot be inspected as easily as Python source.
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.3.x   | :white_check_mark: |
-| 0.2.x   | :x:                |
-| < 0.2   | :x:                |
+| Component                  | Supported          |
+| --------------------------- | ------------------- |
+| Latest `source code/*.cpp`  | :white_check_mark: |
+| Precompiled `.so` / `.dll`  | :warning: see below |
 
-Only the latest `0.3.x` release receives security fixes. Older versions are end-of-life and will not be patched — please upgrade before reporting an issue tied to an unsupported version.
+The `.cpp` source files are the only artifacts covered by ongoing security support. Precompiled binaries are provided for convenience only.
+
+## Recommendation: build from source
+
+**We strongly recommend compiling these add-ons yourself from the `.cpp` files** rather than using the precompiled `.so`/`.dll` binaries included in this branch, especially in production:
+
+```bash
+g++ -shared -fPIC -O2 -o amcx_accel.so amcx_accel.cpp      # Linux/Mac
+x86_64-w64-mingw32-g++ -shared -O2 -o amcx_accel.dll amcx_accel.cpp   # Windows
+```
+
+Precompiled binaries are convenient for testing, but you should not trust a `.so`/`.dll` you didn't build yourself in any environment that matters. Verify the source first, then compile.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in amcx, please **do not open a public issue**. Instead, report it privately by opening a [GitHub Security Advisory](https://github.com/hacko223/adaptive-memory-chunk-eXtended/security/advisories/new) on this repository.
+If you find a vulnerability in any of the `.cpp` add-ons — a buffer overflow, an out-of-bounds read/write, an unsafe `memcpy`/`memset`, or any memory-safety issue — please report it privately through a [GitHub Security Advisory](https://github.com/hacko223/adaptive-memory-chunk-eXtended/security/advisories/new) rather than a public issue.
 
-When reporting, please include:
+Include:
 
-- A description of the vulnerability and its potential impact
-- Steps to reproduce it (a minimal code sample helps a lot)
-- The version of `amcx` you tested against
-- Whether the issue affects `detection.py` (bypass detection), the `.amcx` file format itself, or another part of the library
+- Which add-on is affected (`amcx_accel`, `amcx_crc32`, `amcx_sha1`, or `amcx_xor`)
+- A minimal C++ or Python/ctypes reproduction
+- Compiler and platform used (e.g. `g++ 13.3.0` on Linux, or `mingw-w64` cross-compiled `.dll`)
 
 ### What to expect
 
-- You will get an initial response within **5 business days**.
-- We will confirm whether the issue is accepted or declined within **14 days** of the initial response.
-- If accepted, we will work on a fix and aim to release a patched version as soon as possible. You will be credited in the changelog unless you prefer to stay anonymous.
-- If declined, we will explain why (e.g. not reproducible, out of scope, or working as intended).
+- Initial response within **5 business days**.
+- Accepted/declined decision within **14 days**.
+- Memory-safety issues in native code are treated as **high priority** given the elevated risk of running unmanaged code — fixes will be prioritized over feature work on this branch.
 
-### Scope
+## Scope
 
-This policy covers the `amcx` Python package itself — the `.amcx` binary format, the reader/writer, compression, mirror/recovery, and the `detection.py` bypass scanner. It does not cover third-party code that uses `amcx`, nor the `docs/` website hosted via GitHub Pages.
+Covered: the four `.cpp` files in `source code/` and the loading logic that will integrate them into `amcx` (e.g. `accelerator_path` parameters once merged).
 
-Thank you for helping keep amcx and its users safe.
+Not covered: the precompiled `.so`/`.dll` binaries as distributed (build them yourself), and any third-party fork or modification of these add-ons.
