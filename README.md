@@ -2,13 +2,16 @@
 
 A Python library for efficient memory chunking with adaptive algorithms **(zero dependencies)**.
 
-### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or [page](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
+### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or see [changelog](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
 
 ## Installation
 
 ```bash
 pip install amcx
 ```
+
+## to slow?
+***use [add-ons](https://github.com/hacko223/adaptive-memory-chunk-eXtended/tree/Add-ons) (function under development of the `amcx` library)***
 
 ## Usage
 
