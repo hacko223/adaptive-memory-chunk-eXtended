@@ -238,9 +238,20 @@ const CHANGELOG = [
     ]
   },
  {
+    version: "v0.3.3.2",
+    date: "2026-06-21",
+    status: "active",
+    phase: "beta",
+    items: [
+      { tag: "fixed", text: "smart.py — flush() no longer decompresses and recompresses every existing chunk on each auto-save, fixing O(n²) slowdown that could hang on large histories" },
+      { tag: "fixed", text: "writer.py — ChunkEntry now supports pre_compressed chunks, copying raw compressed bytes instead of recompressing unchanged data" },
+      { tag: "changed", text: "verify_integrity() significantly faster on large files as a side effect of the same fix" }
+    ]
+  },
+ {
     version: "v0.3.3.1",
     date: "2026-06-17",
-    status: "active",
+    status: "end-of-life",
     phase: "beta",
     items: [
       { tag: "fixed",    text: "detection.py" },
