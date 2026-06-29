@@ -15,7 +15,7 @@ from .format import (
     HEADER_SIZE, INDEX_ENTRY_SIZE, SUMMARY_SIZE,
     HEADER_STRUCT, INDEX_ENTRY_STRUCT,
 )
-from .compression import compress
+from .compression import compress, decompress
 from .exceptions import AMCXReadOnlyError
 from .mirror import AMCXMirror, AMCXRecovery, MirrorMode, MirrorStatus, ChunkStatus
 
@@ -97,31 +97,44 @@ class AMCXWriter:
             algorithm=algorithm,
         ))
 
-    def save(self, path: str) -> None:
+    def save(self, path: str, accelerator_path: Optional[str] = None) -> None:
         """
         Serializes and writes the .amcx file.
         If mirror=AUTO, also generates the .amcx.mirror.
         If recovery=True, also appends XOR blocks at the end.
+
+        accelerator_path: optional path to a native .so/.dll (amcx_sha1 /
+        amcx_xor) used to speed up the mirror/recovery blocks. Falls back
+        silently to pure Python if not given or if loading fails.
         """
         with open(path, "wb") as f:
             f.write(self._build())
 
         if self.recovery:
-            AMCXRecovery.append(path, group_size=self.recovery_group)
+            AMCXRecovery.append(path, group_size=self.recovery_group, accelerator_path=accelerator_path)
 
         if self.mirror == MirrorMode.AUTO:
-            self.embed_mirror(path)
+            self.embed_mirror(path, accelerator_path=accelerator_path)
 
-    def embed_mirror(self, path: str) -> None:
+    def embed_mirror(self, path: str, accelerator_path: Optional[str] = None) -> None:
         """
         Embeds the SHA-1 mirror block inside the .amcx manually.
         Useful when mirror=MANUAL.
+
+        The mirror must always hash the *original* (decompressed) content of
+        each chunk, since that's what AMCXMirror.verify() compares against
+        (it reads chunks back via AMCXReader.read_chunk(), which decompresses
+        them). For chunks added through add_chunk()/add_text_chunk(), `content`
+        already holds that original data. For chunks copied over with
+        pre_compressed=True (e.g. SmartMemory.flush() re-saving existing
+        chunks without recompressing them), `content` holds the *compressed*
+        bytes instead, so we decompress them first to get a matching hash.
         """
-        chunk_data = {
-            e.chunk_id: (e.content, e.summary)
-            for e in self._chunks
-        }
-        AMCXMirror.embed(path, chunk_data)
+        chunk_data = {}
+        for e in self._chunks:
+            original = decompress(e.content, e.algorithm) if e.pre_compressed else e.content
+            chunk_data[e.chunk_id] = (original, e.summary)
+        AMCXMirror.embed(path, chunk_data, accelerator_path=accelerator_path)
 
     def to_bytes(self) -> bytes:
         """Returns the .amcx file as bytes (useful for tests or sending over the network)."""
