@@ -10,11 +10,119 @@
 import hashlib
 import struct
 import time
+import ctypes
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
 
 from .exceptions import AMCXError, AMCXCorruptError
+
+
+# ─── Optional native accelerators (C++ add-ons) ───────────────────────────────
+# Loaded only if a path is passed explicitly. Falls back silently to the
+# pure-Python implementation (hashlib.sha1 / manual XOR) if loading fails.
+
+_sha1_accel_cache: dict[str, "ctypes.CDLL"] = {}
+_xor_accel_cache:  dict[str, "ctypes.CDLL"] = {}
+
+
+def _load_sha1_accelerator(path: Optional[str]):
+    if not path:
+        return None
+    if path in _sha1_accel_cache:
+        return _sha1_accel_cache[path]
+    try:
+        lib = ctypes.CDLL(path)
+        lib.amcx_accelerator_version.restype = ctypes.c_int32
+        lib.amcx_sha1.argtypes = [ctypes.c_char_p, ctypes.c_int32, ctypes.c_char_p]
+        lib.amcx_sha1.restype = None
+        _ = lib.amcx_accelerator_version()
+        _sha1_accel_cache[path] = lib
+        return lib
+    except Exception:
+        return None
+
+
+def _load_xor_accelerator(path: Optional[str]):
+    if not path:
+        return None
+    if path in _xor_accel_cache:
+        return _xor_accel_cache[path]
+    try:
+        lib = ctypes.CDLL(path)
+        lib.amcx_accelerator_version.restype = ctypes.c_int32
+        lib.amcx_xor_parity.argtypes = [
+            ctypes.POINTER(ctypes.c_char_p), ctypes.POINTER(ctypes.c_int32), ctypes.c_int32,
+            ctypes.c_char_p, ctypes.c_int32,
+        ]
+        lib.amcx_xor_parity.restype = ctypes.c_int32
+        lib.amcx_xor_recover.argtypes = [
+            ctypes.c_char_p, ctypes.c_int32,
+            ctypes.POINTER(ctypes.c_char_p), ctypes.POINTER(ctypes.c_int32), ctypes.c_int32,
+            ctypes.c_char_p, ctypes.c_int32,
+        ]
+        lib.amcx_xor_recover.restype = ctypes.c_int32
+        _ = lib.amcx_accelerator_version()
+        _xor_accel_cache[path] = lib
+        return lib
+    except Exception:
+        return None
+
+
+def _sha1_digest(data: bytes, accelerator_path: Optional[str] = None) -> bytes:
+    lib = _load_sha1_accelerator(accelerator_path)
+    if lib is not None:
+        try:
+            out = ctypes.create_string_buffer(20)
+            lib.amcx_sha1(data, len(data), out)
+            return out.raw
+        except Exception:
+            pass
+    return hashlib.sha1(data).digest()
+
+
+def _xor_parity(buffers: list[bytes], accelerator_path: Optional[str] = None) -> bytes:
+    lib = _load_xor_accelerator(accelerator_path)
+    max_len = max(len(b) for b in buffers)
+    if lib is not None:
+        try:
+            padded = [b + b'\x00' * (max_len - len(b)) for b in buffers]
+            ptrs = (ctypes.c_char_p * len(padded))(*padded)
+            lens = (ctypes.c_int32 * len(padded))(*[len(b) for b in padded])
+            out = ctypes.create_string_buffer(max_len)
+            ret = lib.amcx_xor_parity(ptrs, lens, len(padded), out, max_len)
+            if ret == 0:
+                return out.raw
+        except Exception:
+            pass
+    padded = [b + b'\x00' * (max_len - len(b)) for b in buffers]
+    parity = bytearray(padded[0])
+    for extra in padded[1:]:
+        for i, b in enumerate(extra):
+            parity[i] ^= b
+    return bytes(parity)
+
+
+def _xor_recover(parity: bytes, healthy: list[bytes], accelerator_path: Optional[str] = None) -> bytes:
+    lib = _load_xor_accelerator(accelerator_path)
+    max_len = max(len(parity), *(len(h) for h in healthy)) if healthy else len(parity)
+    if lib is not None:
+        try:
+            padded = [h + b'\x00' * (max_len - len(h)) for h in healthy]
+            ptrs = (ctypes.c_char_p * len(padded))(*padded)
+            lens = (ctypes.c_int32 * len(padded))(*[len(h) for h in padded])
+            out = ctypes.create_string_buffer(max_len)
+            ret = lib.amcx_xor_recover(parity, len(parity), ptrs, lens, len(padded), out, max_len)
+            if ret == 0:
+                return out.raw
+        except Exception:
+            pass
+    result = bytearray(parity + b'\x00' * (max_len - len(parity)))
+    for h in healthy:
+        padded = h + b'\x00' * (max_len - len(h))
+        for i, b in enumerate(padded):
+            result[i] ^= b
+    return bytes(result)
 
 
 # ─── Magic bytes for each block ───────────────────────────────────────────────
@@ -113,7 +221,7 @@ class AMCXMirror:
     """
 
     @staticmethod
-    def build_block(chunk_data: dict[int, tuple[bytes, str]]) -> bytes:
+    def build_block(chunk_data: dict[int, tuple[bytes, str]], accelerator_path: Optional[str] = None) -> bytes:
         """
         Builds the mirror block in bytes.
 
@@ -126,7 +234,7 @@ class AMCXMirror:
         buf += struct.pack('>Q', int(time.time()))              # timestamp
 
         for chunk_id, (data, summary) in sorted(chunk_data.items()):
-            sha1          = hashlib.sha1(data).digest()         # 20 raw bytes
+            sha1          = _sha1_digest(data, accelerator_path)    # 20 raw bytes
             summary_bytes = summary.encode("utf-8")[:255]
             buf += struct.pack('>II', chunk_id, len(data))
             buf += sha1
@@ -171,7 +279,7 @@ class AMCXMirror:
         return {"timestamp": timestamp, "chunks": chunks}
 
     @staticmethod
-    def verify(amcx_path: str) -> MirrorStatus:
+    def verify(amcx_path: str, accelerator_path: Optional[str] = None) -> MirrorStatus:
         """
         Compares the mirror block with the current chunks in the file.
         """
@@ -206,7 +314,7 @@ class AMCXMirror:
 
                 try:
                     raw  = reader.read_chunk(cid)
-                    sha1 = hashlib.sha1(raw).hexdigest()
+                    sha1 = _sha1_digest(raw, accelerator_path).hex()
                 except AMCXCorruptError:
                     sha1 = None
 
@@ -241,7 +349,7 @@ class AMCXMirror:
         return status
 
     @staticmethod
-    def embed(amcx_path: str, chunk_data: dict[int, tuple[bytes, str]]) -> None:
+    def embed(amcx_path: str, chunk_data: dict[int, tuple[bytes, str]], accelerator_path: Optional[str] = None) -> None:
         """Adds or replaces the mirror block at the end of the file."""
         with open(amcx_path, "rb") as f:
             data = f.read()
@@ -253,10 +361,10 @@ class AMCXMirror:
 
         with open(amcx_path, "wb") as f:
             f.write(data)
-            f.write(AMCXMirror.build_block(chunk_data))
+            f.write(AMCXMirror.build_block(chunk_data, accelerator_path))
 
     @staticmethod
-    def update(amcx_path: str) -> None:
+    def update(amcx_path: str, accelerator_path: Optional[str] = None) -> None:
         """Regenerates the mirror block by reading the current state of the chunks."""
         from .reader import AMCXReader
         chunk_data = {}
@@ -264,7 +372,7 @@ class AMCXMirror:
             for entry in reader.list_chunks():
                 raw = reader.read_chunk(entry.chunk_id)
                 chunk_data[entry.chunk_id] = (raw, entry.summary)
-        AMCXMirror.embed(amcx_path, chunk_data)
+        AMCXMirror.embed(amcx_path, chunk_data, accelerator_path)
 
 
 # ─── AMCXRecovery — embedded XOR blocks ──────────────────────────────────────
@@ -288,7 +396,7 @@ class AMCXRecovery:
     """
 
     @staticmethod
-    def append(amcx_path: str, group_size: int = 3) -> None:
+    def append(amcx_path: str, group_size: int = 3, accelerator_path: Optional[str] = None) -> None:
         """Appends XOR recovery blocks to the file."""
         from .reader import AMCXReader
 
@@ -300,13 +408,8 @@ class AMCXRecovery:
             for gidx, group in enumerate(groups):
                 chunk_ids = [e.chunk_id for e in group]
                 chunks    = [reader.read_chunk(cid) for cid in chunk_ids]
-                max_len   = max(len(c) for c in chunks)
-                padded    = [c + b'\x00' * (max_len - len(c)) for c in chunks]
-                parity    = bytearray(padded[0])
-                for extra in padded[1:]:
-                    for i, b in enumerate(extra):
-                        parity[i] ^= b
-                recovery_blocks.append((gidx, chunk_ids, bytes(parity)))
+                parity    = _xor_parity(chunks, accelerator_path)
+                recovery_blocks.append((gidx, chunk_ids, parity))
 
         with open(amcx_path, "ab") as f:
             f.write(RECOVERY_MAGIC)
@@ -324,7 +427,7 @@ class AMCXRecovery:
         return any(damaged_chunk_id in ids for _, ids, _ in blocks)
 
     @staticmethod
-    def recover_chunk(amcx_path: str, damaged_chunk_id: int) -> bytes:
+    def recover_chunk(amcx_path: str, damaged_chunk_id: int, accelerator_path: Optional[str] = None) -> bytes:
         """Reconstructs a damaged chunk using XOR parity."""
         from .reader import AMCXReader
 
@@ -345,14 +448,8 @@ class AMCXRecovery:
                             f"chunk {cid} in the same group is also damaged."
                         )
 
-            max_len = max(len(parity), *(len(h) for h in healthy))
-            result  = bytearray(parity + b'\x00' * (max_len - len(parity)))
-            for h in healthy:
-                padded = h + b'\x00' * (max_len - len(h))
-                for i, b in enumerate(padded):
-                    result[i] ^= b
-
-            return bytes(result).rstrip(b'\x00')
+            result = _xor_recover(parity, healthy, accelerator_path)
+            return result.rstrip(b'\x00')
 
         raise AMCXError(f"No recovery block found for chunk {damaged_chunk_id}.")
 

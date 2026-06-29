@@ -13,6 +13,56 @@ from .reader import AMCXReader
 from .exceptions import AMCXCorruptError, AMCXSecurityError
 
 
+# ─── Optional native accelerator (C++ add-on) ─────────────────────────────────
+# Loaded only if the developer passes accelerator_path explicitly.
+# If it fails to load for any reason, detection silently falls back to
+# the pure-Python implementation below — no exception is raised.
+
+_accelerator_cache: dict[str, "ctypes.CDLL"] = {}
+
+
+def _load_accelerator(path: Optional[str]):
+    if not path:
+        return None
+    if path in _accelerator_cache:
+        return _accelerator_cache[path]
+
+    try:
+        lib = ctypes.CDLL(path)
+
+        lib.amcx_accelerator_version.restype = ctypes.c_int32
+        lib.amcx_scan_buffer.argtypes = [
+            ctypes.c_char_p, ctypes.c_int32,
+            ctypes.POINTER(ctypes.c_char_p), ctypes.POINTER(ctypes.c_int32), ctypes.c_int32,
+            ctypes.POINTER(ctypes.c_int32), ctypes.c_int32,
+        ]
+        lib.amcx_scan_buffer.restype = ctypes.c_int32
+        lib.amcx_scrub_buffer.argtypes = [ctypes.c_char_p, ctypes.c_int32]
+        lib.amcx_scrub_buffer.restype = ctypes.c_int32
+
+        _ = lib.amcx_accelerator_version()  # sanity call
+        _accelerator_cache[path] = lib
+        return lib
+    except Exception:
+        return None
+
+
+def _accel_scan_text(lib, text: str, patterns: list[bytes]) -> list[int]:
+    try:
+        data = text.encode("utf-8", errors="replace")
+        pat_ptrs = (ctypes.c_char_p * len(patterns))(*patterns)
+        pat_lens = (ctypes.c_int32 * len(patterns))(*[len(p) for p in patterns])
+        max_matches = len(patterns)
+        out = (ctypes.c_int32 * max_matches)()
+
+        n = lib.amcx_scan_buffer(data, len(data), pat_ptrs, pat_lens, len(patterns), out, max_matches)
+        if n < 0:
+            return []
+        return list(out[:n])
+    except Exception:
+        return []
+
+
 # ─── Bypass signatures (chunk-level) ──────────────────────────────────────────
 
 _BYPASS_PATTERNS: list[re.Pattern] = [
@@ -118,10 +168,11 @@ def _scan_text(text: str) -> list[str]:
     return hits
 
 
-def scan_chunks(path: str) -> ScanResult:
+def scan_chunks(path: str, accelerator_path: Optional[str] = None) -> ScanResult:
     if not os.path.exists(path):
         return ScanResult(clean=True)
 
+    accel = _load_accelerator(accelerator_path)
     threats: list[ChunkThreat] = []
 
     with AMCXReader(path) as reader:
@@ -133,11 +184,16 @@ def scan_chunks(path: str) -> ScanResult:
             except Exception:
                 continue
 
-            hits = _scan_text(text)
-
-            # Also scan the summary field
-            summary_hits = _scan_text(entry.summary)
-            hits.extend(summary_hits)
+            if accel is not None:
+                matched_idx = _accel_scan_text(accel, text + " " + entry.summary, _RAM_BYTE_PATTERNS)
+                hits = [_RAM_BYTE_PATTERNS[i].decode("utf-8") for i in matched_idx]
+                # the accelerator only checks literal substrings — still run the
+                # regex patterns in Python since they cover things it cannot
+                hits.extend(_scan_text(text))
+                hits.extend(_scan_text(entry.summary))
+            else:
+                hits = _scan_text(text)
+                hits.extend(_scan_text(entry.summary))
 
             if hits:
                 threats.append(ChunkThreat(
@@ -204,7 +260,8 @@ def _scrub_string_in_place(target_id: int) -> None:
         pass
 
 
-def scan_ram(purge: int = 1) -> ScanResult:
+def scan_ram(purge: int = 1, accelerator_path: Optional[str] = None) -> ScanResult:
+    accel = _load_accelerator(accelerator_path)
     ram_threats: list[str] = []
     matched_patterns: list[str] = []
     purge_ids: list[int] = []
@@ -213,6 +270,15 @@ def scan_ram(purge: int = 1) -> ScanResult:
     objects = _iter_object_strings()
 
     for text in objects:
+        if accel is not None:
+            matched_idx = _accel_scan_text(accel, text, _RAM_BYTE_PATTERNS)
+            if matched_idx:
+                ram_threats.append("[redacted]")
+                matched_patterns.append(_RAM_BYTE_PATTERNS[matched_idx[0]].decode("utf-8"))
+                if purge:
+                    purge_ids.append(id(text))
+            continue
+
         text_lower = text.lower().encode("utf-8", errors="replace")
         for pat_bytes in _RAM_BYTE_PATTERNS:
             if pat_bytes.lower() in text_lower:
@@ -232,9 +298,15 @@ def scan_ram(purge: int = 1) -> ScanResult:
 
 # ─── Full pipeline ─────────────────────────────────────────────────────────────
 
-def full_scan(path: str, chunk_scan: int = 1, ram_scan: int = 1, ram_purge: int = 1) -> ScanResult:
-    chunk_result = scan_chunks(path) if chunk_scan else ScanResult(clean=True)
-    ram_result   = scan_ram(purge=ram_purge) if ram_scan else ScanResult(clean=True)
+def full_scan(
+    path: str,
+    chunk_scan: int = 1,
+    ram_scan: int = 1,
+    ram_purge: int = 1,
+    accelerator_path: Optional[str] = None,
+) -> ScanResult:
+    chunk_result = scan_chunks(path, accelerator_path=accelerator_path) if chunk_scan else ScanResult(clean=True)
+    ram_result   = scan_ram(purge=ram_purge, accelerator_path=accelerator_path) if ram_scan else ScanResult(clean=True)
 
     return ScanResult(
         clean         = chunk_result.clean and ram_result.clean,
@@ -245,10 +317,10 @@ def full_scan(path: str, chunk_scan: int = 1, ram_scan: int = 1, ram_purge: int 
 
 # ─── Guard decorator ───────────────────────────────────────────────────────────
 
-def guarded(path: str, raise_on_threat: bool = True):
+def guarded(path: str, raise_on_threat: bool = True, accelerator_path: Optional[str] = None):
     def decorator(fn):
         def wrapper(*args, **kwargs):
-            result = full_scan(path)
+            result = full_scan(path, accelerator_path=accelerator_path)
             if not result.clean and raise_on_threat:
                 raise AMCXSecurityError(
                     f"Bypass detected before execution — "

@@ -14,7 +14,7 @@ from .exceptions import (
     AMCXSecurityError,
 )
 
-__version__ = "0.3.3.2"
+__version__ = "0.3.4"
 __author__  = "hacko223"
 __all__ = [
     "AMCXReader", "AMCXWriter",
