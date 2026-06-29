@@ -227,10 +227,19 @@
 // ─── tags disponibles: "added" | "changed" | "fixed" | "security"
 // ═══════════════════════════════════════════════════════════════
 const CHANGELOG = [
+  {
+    version: "v0.3.4.1",
+    date: "2026-06-28",
+    status: "active",
+    phase: "beta",
+    items: [
+      { tag: "fixed", text: "fixed a critical bug on  module writer.py" }
+    ]
+  },
  {
     version: "v0.3.4",
     date: "2026-06-24",
-    status: "active",
+    status: "end-of-life",
     phase: "beta",
     items: [
       { tag: "added", text: "optional support for native C++ accelerator add-ons (amcx_accel, amcx_crc32, amcx_sha1, amcx_xor) — pure Python fallback remains default" }
@@ -239,7 +248,7 @@ const CHANGELOG = [
  {
     version: "v0.3.3.2",
     date: "2026-06-21",
-    status: "active",
+    status: "end-of-life",
     phase: "beta",
     items: [
       { tag: "fixed", text: "smart.py — flush() no longer decompresses and recompresses every existing chunk on each auto-save, fixing O(n²) slowdown that could hang on large histories" },
