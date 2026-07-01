@@ -1,25 +1,6 @@
-# Adaptive Memory Chunk eXtended (amcx)
+# Adaptive Memory Chunk eXtended (amcx) Viewer
 
-A Python library for efficient memory chunking with adaptive algorithms **(zero dependencies)**.
-
-### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or see [changelog](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
-
-## Installation
-
-```bash
-pip install amcx
-```
-
-## to slow?
-***use [add-ons](https://github.com/hacko223/adaptive-memory-chunk-eXtended/tree/Add-ons) (function under development of the `amcx` library)***
-
-## Usage
-
-```python
-from amcx import chunk_memory
-
-# Your code here
-```
+if you wanna see how look inside the binary amcx go to releases
 
 ## License
 
