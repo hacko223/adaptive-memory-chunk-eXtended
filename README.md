@@ -23,8 +23,8 @@ from amcx import chunk_memory
 
 ## License
 
-This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0+).
-See the [LICENSE](https://github.com/hacko223/adaptive-memory-chunk-eXtended/blob/f8390768395aa1d9dc210e9f25de0366684dfaf2/LICENSE) file for details.
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0).
+See the [LICENSE](https://github.com/hacko223/adaptive-memory-chunk-eXtended/blob/f8390768395aa1d9dc210e9f25de0366684dfaf2/LICENSE) and [LICENSE.LESSER](https://github.com/hacko223/adaptive-memory-chunk-eXtended/blob/582ca4e2dc7cb92702308821e207127724eb7bb0/LICENSE.LESSER) file for details
 
 ## Author
 
