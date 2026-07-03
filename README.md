@@ -4,6 +4,7 @@ A Python library for efficient memory chunking with adaptive algorithms **(zero 
 
 ### *read [wiki](https://github.com/hacko223/adaptive-memory-chunk-eXtended/wiki) or see [changelog](https://hacko223.github.io/adaptive-memory-chunk-eXtended/) for more info*
 
+**The library uses a module called detection.py that has the ability to purge RAM if it detects any malicious prompts; it is experimental**
 ## Installation
 
 ```bash
